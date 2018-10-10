@@ -1,0 +1,14 @@
+N=int(input())
+
+c=N%10
+N//=10
+b=N%10
+N//=10
+a=N%10
+
+d=1
+if((a==b and b>=c )or a>b):
+    a=a-1
+a=a+1
+d=a*100+a*10+a
+print(d)
