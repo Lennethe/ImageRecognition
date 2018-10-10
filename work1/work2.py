@@ -36,23 +36,10 @@ def sigmoidfun(a):
     return a
 
 
-def double(a):
-    return a*2
-
-# v=int(input())
-# print(sigmoidfun(v))
-
-# calsulating axis may take waste time.
-
 
 def sigmoidfunv(v):
     v = np.apply_along_axis(sigmoidfun, 0, v)
     return v
-
-# n = int(input())
-# v = [[int(i) for i in input().split()] for _ in range(n)]
-# v=sigmoidfunv(v)
-# print(v)
 
 
 def softmaxfun(a):
@@ -64,15 +51,6 @@ def softmaxfun(a):
     return a1/under
 
 
-# print(pow(np.e, 0))
-# n = int(input())
-# v = [[int(i) for i in input().split()] for _ in range(n)]
-# v = softmaxfun(v)
-# print(v)
-# print(np.amax(v))
-
-# def postdeal(a,b)
-
 
 from mnist import MNIST
 mndata = MNIST("/export/home/016/a0160260/le4nn/")
@@ -81,7 +59,7 @@ X = np.array(X)
 X = X.reshape((X.shape[0],28,28))
 Y = np.array(Y)
 
-in1 = int(input())
+
 
 def main(i):
     X1 = X[i]
@@ -93,18 +71,46 @@ def main(i):
     return Xres
 
 
-# p = 0
-# for i in range(in1):
-#     if main(i)==Y[i]:
-#         p=p+1
-# print(p/in1)
+# work2
 
-print("prediction is"),print(main(in1))
-print("answer is"), print(Y[in1])
+# input is true
+def onehotvector(i):
+    a = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    a[i] = 1
+    return a
 
-# For make sure
-# import matplotlib.pyplot as plt
-# from pylab import cm
-# plt.imshow(X[in1], cmap=cm.gray)
-# plt.show()
-# print(Y[in1])
+# n = int(input())
+# print(Y[n])
+# print(onehotvector(Y[n]))
+
+
+def deal1(i):
+    y1 = X[i]
+    y2 = inputlayer(y1)
+    y3 = fullconnectedlayer1(y2)
+    y4 = fullconnectedlayer2(y3)
+    y5 = softmaxfun(y4)
+    return y5
+
+def crossentropy(i):
+    yk = onehotvector(int(Y[i]))
+    yk2 = deal1(i)
+    f = lambda x: np.log(x)
+    yk2 = np.apply_along_axis(f, 0, yk2)
+    return float(((-1)*np.dot(yk,yk2)))
+
+# n = int(input())
+# v = [[int(i) for i in input().split()] for _ in range(n)]
+# print(v)
+# print(np.apply_along_axis(crossentropy, 0, v))
+
+
+def minibatch(B):
+    arr = np.arange(60000)
+    arr = [np.random.choice(arr, B, replace=False)]
+    crossn =np.apply_along_axis(crossentropy, 0, arr)
+    E = np.sum(crossn)/B
+    return E
+
+print(minibatch(100))
+
