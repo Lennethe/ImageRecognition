@@ -19,34 +19,24 @@ b2 = np.random.normal(0, 1/np.sqrt(N), (C, 1))
 
 
 def inputlayer(x):
-
     return np.reshape(x, (d, 1))
 
 
 def fullconnectedlayer1(x):
-    return sigmoidfunv(np.dot(W1, x)+b1)
+    return sigmoidfun(np.dot(W1, x)+b1)
 
 
 def fullconnectedlayer2(y):
-    return sigmoidfunv(np.dot(W2, y)+b2)
+    return sigmoidfun(np.dot(W2, y)+b2)
 
 
-def sigmoidfun(a):
-    a = 1/(1+pow(np.e, a))
-    return a
 
 
-def double(a):
-    return a*2
-
-# v=int(input())
-# print(sigmoidfun(v))
-
-# calsulating axis may take waste time.
 
 
-def sigmoidfunv(v):
-    v = np.apply_along_axis(sigmoidfun, 0, v)
+def sigmoidfun(v):
+    f = lambda x: 1/(1+pow(np.e,x))
+    v = np.apply_along_axis(f, 0, v)
     return v
 
 # n = int(input())
@@ -81,8 +71,7 @@ X = np.array(X)
 X = X.reshape((X.shape[0],28,28))
 Y = np.array(Y)
 
-in1 = int(input())
-
+in1 = [int(input())]
 def main(i):
     X1 = X[i]
     X2 = inputlayer(X1)
@@ -99,11 +88,14 @@ def main(i):
 #         p=p+1
 # print(p/in1)
 
-print("prediction is"),print(main(in1))
-print("answer is"), print(Y[in1])
+print("prediction is", end=" ")
+print(main(in1))
+print("answer is", end=" ")
+print(int(Y[in1]))
 
 # For make sure
-# import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt1
+
 # from pylab import cm
 # plt.imshow(X[in1], cmap=cm.gray)
 # plt.show()
