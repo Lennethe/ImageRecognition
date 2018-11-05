@@ -1,9 +1,9 @@
 import numpy as np
-
+# np.set_printoptions(threshold=np.inf)
 
 
 d = 28*28
-M = 4  # instant
+M = 100  # instant
 C = 10
 
 # N= hyoujunhensa
@@ -32,26 +32,62 @@ def fullconnectedlayer2(y):
 
 
 
-
+def sigmoidf(t):
+    if t <= -34.5:
+        return 1e-15
+    if t >= 34.5:
+        return 1.0 - 1e-15
+    return 1/(1+np.exp(-t))
 
 
 def sigmoidfun(v):
-    f = lambda x: 1/(1+pow(np.e,x))
-    v = np.apply_along_axis(f, 0, v)
+    v = np.vectorize(sigmoidf)(v)
     return v
 
 
 
 # n = int(input())
 # v = [[int(i) for i in input().split()] for _ in range(n)]
-# v=sigmoidfunv(v)
+# v = np.apply_along_axis(sigmoidfun, 0, v)
 # print(v)
+
+
+
+
+# n = int(input())
+# print(ReLU(n))
+
+
+def ReLU(v):
+    f = lambda x: np.maximum(0, x)
+    v = np.vectorize(f)(v)
+    return v
+
+
+def ReLUd(t):
+    if t > 0:
+        return 1
+    else:
+        return 0
+
+
+def ReLUdarr(v):
+    v=[v]
+    v = np.apply_along_axis(ReLUd, 0, v)
+    return v
+
+
+# n = int(input())
+# v = [[int(i) for i in input().split()] for _ in range(n)]
+# print(v)
+# v = np.apply_along_axis(ReLUdarr, 0, v)
+# print(v)
+
 
 
 def softmaxfun(a):
     alpha = np.amax(a)
-    f = lambda x: pow(np.e, x-alpha)
-    a1 = np.apply_along_axis(f, 0, a)
+    a1 = np.exp(a-alpha) #np.apply_along_axis(lambda x: np.exp(x-alpha), 0, a)
     under = np.sum(a1)
 
     return a1/under
@@ -130,19 +166,32 @@ def crossentropy(i):
 
 def minibatch(B):
     arr = np.arange(60000)
-    arr = [np.random.choice(arr, B, replace=False)]
-    crossn =np.apply_along_axis(crossentropy, 0, arr)
+    v = [np.random.choice(arr, B, replace=False)]
+    crossn = np.apply_along_axis(crossentropy, 0, v)
     E = np.sum(crossn)/B
     return E
 
-# work
+# work3
+
+
+def deal3(i):
+    y1 = X[i]
+    y2 = inputlayer(y1)
+    y3 = fullconnectedlayer1(y2)
+    y4 = fullconnectedlayer2(y3)
+    y5 = softmaxfun(y4)
+    return np.ravel(y5)
+
+def minibatch3(B):
+    arr = np.arange(60000)
+    v = [np.random.choice(arr, B, replace=False)]
+    return v
 
 
 def sigmoidfund(v):
-    f = lambda x: 1/(1+pow(np.e,x))
-    f1 = lambda x : (1-x)*x
+    f = lambda x: 1/(1+np.exp(x))
+    f1 = lambda x: (1-x)*x
     v = np.apply_along_axis(f, 0, v)
     v = np.apply_along_axis(f1, 0, v)
     return v
-
 
