@@ -1,8 +1,7 @@
-import numpy as np
+ import numpy as np
 import sys, os
 sys.path.append(os.pardir)
 from collections import OrderedDict
-
 
 def flatten(x):
     x = np.reshape(x, (784, 1))
@@ -29,7 +28,6 @@ class Sigmoid:
 
     def forward(self, x):
         self.out = np.apply_along_axis(sigmoid, 0, x)
-
         return sigmoid(x)
 
     def backward(self, dout):
@@ -50,7 +48,6 @@ class ReLU:
         self.mask = (x <= 0)
         out = x.copy()
         out[self.mask] = 0
-
         return out
 
     def backward(self, dout):
@@ -83,7 +80,20 @@ class Affine:
         return dx
 
 
+class Dropout:
+    def __init__(self, dropout_ratio = 0.5):
+        self.dropout_ratio = dropout_ratio
+        self.mask = None
 
+    def forward(self, x, train_flg = True):
+        if train_flg:
+            self.mask = np.random.rand(*x.shape) > self.dropout_ratio
+            return x * self.mask
+        else:
+            return x * (1.0 - self.dropout_ratio)
+
+    def backward(self, dout):
+        return dout * self.mask
 
 
 def softmax(a):
@@ -114,114 +124,99 @@ class SoftmaxWithLoss:
 
         return dx
 
-
-class SGD:
-    def __init__(self, lr=0.01):import function_1 as fun
-import numpy as np
-import matplotlib.pyplot as plt
-from mnist import MNIST
-mndata = MNIST("/export/home/016/a0160260/le4nn/")
-X, Y = mndata.load_training()
-X = np.array(X)
-X = X.reshape((X.shape[0], 28, 28))
-Y = np.array(Y)
+# 最適化手法の改良
 
 
-def predealx(i):
-    vx = X[i]
-    vx = fun.flatten(vx)
-    return vx
-
-def predealy(i):
-    vy = Y[i]
-    vy = np.apply_along_axis(fun.one_hot_vector, 0, vy)
-    return vy
-
-
-# initialize function
-
-np.random.seed(0)
-network = fun.init_network()
-
-iters_num = 100
-iter_per_epoch = 100
-plotx = []
-ploty = []
-params = {}
-params['W1'] = 0.01 * network['W1']
-params['b1'] = np.zeros(np.shape(network['b1']))
-params['W2'] = 0.01 * network['W2']
-params['b2'] = np.zeros(np.shape(network['b2']))
-
-
-
-for j in range(iters_num):
-    print(j)
-    # making function
-    relu = fun.ReLU()
-    affine1 = fun.Affine(network['W1'], network['b1'])
-    affine2 = fun.Affine(network['W2'], network['b2'])
-    sigmoid = fun.Sigmoid()
-    softmax = fun.SoftmaxWithLoss()
-    optimizer = fun.SGD()
-
-    v = fun.minibatch()
-    x = np.apply_along_axis(predealx, 0, v)
-    x = np.reshape(x, (network['d'], network['B']))
-    t = np.apply_along_axis(predealy, 0, v)
-
-    a1 = affine1.forward(x)
-    y1 = sigmoid.forward(a1)
-
-    a2 = affine2.forward(y1)
-    res = softmax.forward(a2, t)
-    print(res)
-    plotx.append(j)
-    ploty.append(res)
-
-    grad_ak = softmax.backward(1)
-    grad_X = affine2.backward(grad_ak)
-
-    inst2 = sigmoid.backward(y1)
-    grad_Y = np.multiply(grad_X, inst2)
-    dy = affine1.backward(grad_Y)
-
-
-    n = 0.01
-    network['W1'] = network['W1'] - n * affine1.dW
-    network['b1'] = network['b1'] - n * affine1.db
-    network['W2'] = network['W2'] - n * affine2.dW
-    network['b2'] = network['b2'] - n * affine2.db
-
-
-np.savez('hs.npz', pW1=network['W1'], pW2=network['W2'], pb1=network['b1'], pb2=network['b2'])
-
-plt.plot(plotx, ploty, label="relu")
-plt.legend()
-plt.show()
-        self.lr = lr
+class Momentum:
+    def __init__(self, lr, momentum=0.9):
+        self.lr =lr
+        self.momentum = momentum
+        self.v = 0
 
     def update(self, params, grads):
-        for key in params.keys():
-            params[key] -= self.lr * grads[key]
+        self.v = self.momentum * self.v - self.lr * grads
+        return params + self.v
 
 
-def numerical_gardient(f, x):
-    h = 1e-4
-    grad = np.zeros_like(x)
+class BatchNorm:
+    def __init__(self, gamma, beta, momentum=0.9):
+        self.gamma = gamma
+        self.beta = beta
+        self.momentum = momentum
+        self.input_shape = None
 
-    for idx in range (x.size):
-        tmp_val = x[idx]
-        x[idx] = tmp_val + h
-        fxh1 = f(x)
+        # テスト時に使用する平均と分散
+        self.running_mean = None
+        self.running_var = None
 
-        x[idx] = tmp_val - h
-        fxh2 = f(x)
+        self.batch_size = None
+        self.xc = None
+        self.std = None
+        self.dgamma = None
+        self.dbeta = None
 
-        grad[idx] = (fxh1 - fxh2) / (2 * h)
-        x[idx] = tmp_val
+    def forward(self, x, train_flg=True):
+        self.input_shape = x.shape
+        if x.dim != 2:
+            n, c, h, w = x.shape
+            x = x.reshape(n, -1)
 
-    return grad
+        out = self.__forward(x, train_flg)
+
+        return out.reshape(*self.input_shape)
+
+    def __forward(self, x, train_flag):
+        if self.running_mean is None:
+            n, d = x.shape
+            self.running_mean = np.zeros(d)
+            self.running_var = np.zeros(d)
+
+        if train_flag:
+            mu = x.mean(axis=1)
+            xc = x - mu
+            var = np.mean(xc ** 2, axis=1)
+            std = np.sqrt(var + 10e-7)
+            xn = xc / std
+
+            self.batch_size = x.shape[0]
+            self.xc = xc
+            self.xn = xn
+            self.std = std
+            self.running_mean = self.momentum * self.running_mean + (1 - self.momentum) * mu
+            self.running_var = self.momentum * self.running_var + (1 - self.momentum) * var
+        else:
+            xc = x - self.running_mean
+            xn = xc / (np.sqrt(self.running_var + 10e-7))
+
+        out = self.gamma * xn + self.beta
+        return out
+
+    def backward(self, dout):
+        if dout.ndim != 2:
+            n, c, h, w = dout.shape
+            dout = dout.reshape(n, -1)
+
+        dx = self.__backward(dout)
+
+        dx = dx.reshape(*self.input_shape)
+        return dx
+
+    def __backward(self, dout):
+        dbeta = dout.sum(axis=0)
+        dgamma = np.sum(self.xn * dout, axis=0)
+        dxn = self.gamma * dout
+        dxc = dxn / self.std
+        dstd = -np.sum((dxn * self.xc) / (self.std * self.std), axis=0)
+        dvar = 0.5 * dstd / self.std
+        dxc += (2.0 / self.batch_size) * self.xc * dvar
+        dmu = np.sum(dxc, axis=0)
+        dx = dxc - dmu / self.batch_size
+
+        self.dgamma = dgamma
+        self.dbeta = dbeta
+
+        return dx
+
 
 def cross_entropy_error(y, t):
     batch_size = y.shape[1]
